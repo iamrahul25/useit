@@ -33,11 +33,24 @@
           "imageWidth": 76
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to attach images to food items.",
+          "cameraPermission": "The app needs access to your camera to snap photos of food items."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow UseIt to access your camera to take food item photos."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }

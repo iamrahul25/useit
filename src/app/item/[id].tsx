@@ -5,10 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,7 @@ import { Item } from '@/types/item';
 import { getItems, deleteItem } from '@/utils/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDisplayDate, getExpiryStatus, getStatusTheme } from '@/utils/dateUtils';
+import { confirmDialog } from '@/utils/alertUtils';
 
 export default function ItemDetailScreen() {
   const router = useRouter();
@@ -38,33 +38,31 @@ export default function ItemDetailScreen() {
   const handleMarkAsUsed = () => {
     if (!item) return;
 
-    Alert.alert('Mark as Used', `Mark "${item.name}" as consumed or used?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Consumed! 🎉',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteItem(item.id);
-          router.back();
-        },
+    confirmDialog(
+      'Mark as Used',
+      `Mark "${item.name}" as consumed or used?`,
+      async () => {
+        await deleteItem(item.id);
+        router.back();
       },
-    ]);
+      'Consumed! 🎉',
+      true
+    );
   };
 
   const handleDelete = () => {
     if (!item) return;
 
-    Alert.alert('Delete Item', `Are you sure you want to delete "${item.name}" from your catalog?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteItem(item.id);
-          router.back();
-        },
+    confirmDialog(
+      'Delete Item',
+      `Are you sure you want to delete "${item.name}" from your catalog?`,
+      async () => {
+        await deleteItem(item.id);
+        router.back();
       },
-    ]);
+      'Delete',
+      true
+    );
   };
 
   if (loading) {
@@ -122,7 +120,7 @@ export default function ItemDetailScreen() {
         {/* Content Card */}
         <View style={styles.card}>
           <Text style={styles.title}>{item.name}</Text>
-          
+
           <View style={styles.categoryRow}>
             <View style={styles.categoryPill}>
               <Text style={styles.categoryText}>{item.category}</Text>

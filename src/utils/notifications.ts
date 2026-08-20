@@ -1,20 +1,30 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Item } from '@/types/item';
 
-// Configure notification behavior when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Detect if running inside standard Expo Go app
+const isExpoGo =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+  Constants.appOwnership === 'expo';
+
+/**
+ * Safely get the expo-notifications module.
+ * Expo Go removed Android push notification support in SDK 53+, so requiring
+ * expo-notifications inside Expo Go throws an Uncaught Error.
+ */
+function getNotifications() {
+  if (Platform.OS === 'web' || isExpoGo) return null;
+  try {
+    const Notifications = require('expo-notifications');
+    return Notifications;
+  } catch (error) {
+    return null;
+  }
+}
 
 export async function requestNotificationPermissions(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  const Notifications = getNotifications();
+  if (!Notifications || !Notifications.getPermissionsAsync) return false;
 
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -38,7 +48,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
  * 2. Notification on day of expiry at 9:00 AM
  */
 export async function scheduleItemReminders(item: Item): Promise<void> {
-  if (Platform.OS === 'web') return;
+  const Notifications = getNotifications();
+  if (!Notifications || !Notifications.scheduleNotificationAsync) return;
 
   try {
     const hasPermission = await requestNotificationPermissions();
@@ -63,8 +74,8 @@ export async function scheduleItemReminders(item: Item): Promise<void> {
           body: `Use it soon. Quantity: ${item.quantity || '1 item'}`,
           data: { itemId: item.id },
         },
-        trigger: { date: dayBefore } as any,
-      });
+        trigger: { date: dayBefore },
+      }).catch(() => {});
     }
 
     // On day of expiry at 9:00 AM
@@ -78,8 +89,8 @@ export async function scheduleItemReminders(item: Item): Promise<void> {
           body: `Make sure to use or consume it today.`,
           data: { itemId: item.id },
         },
-        trigger: { date: dayOfExpiry } as any,
-      });
+        trigger: { date: dayOfExpiry },
+      }).catch(() => {});
     }
   } catch (error) {
     console.warn('Error scheduling notification:', error);
@@ -87,13 +98,16 @@ export async function scheduleItemReminders(item: Item): Promise<void> {
 }
 
 export async function cancelItemReminders(itemId: string): Promise<void> {
-  if (Platform.OS === 'web') return;
+  const Notifications = getNotifications();
+  if (!Notifications || !Notifications.getAllScheduledNotificationsAsync) return;
 
   try {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    for (const notif of scheduled) {
-      if (notif.content.data?.itemId === itemId) {
-        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+    if (Array.isArray(scheduled)) {
+      for (const notif of scheduled) {
+        if (notif.content?.data?.itemId === itemId) {
+          await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+        }
       }
     }
   } catch (error) {

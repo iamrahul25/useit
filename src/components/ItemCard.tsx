@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { Item } from '@/types/item';
 import { StatusBadge } from './StatusBadge';
 import { getExpiryStatus, getStatusTheme } from '@/utils/dateUtils';
@@ -9,10 +10,11 @@ import { useRouter } from 'expo-router';
 interface ItemCardProps {
   item: Item;
   onPress?: () => void;
+  onDelete?: (item: Item) => void;
   compact?: boolean;
 }
 
-export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
+export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardProps) {
   const router = useRouter();
   const status = getExpiryStatus(item.expiryDate);
   const theme = getStatusTheme(status);
@@ -22,6 +24,20 @@ export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
       onPress();
     } else {
       router.push({ pathname: '/item/[id]', params: { id: item.id } });
+    }
+  };
+
+  const handleDeletePress = (e?: any) => {
+    // Prevent event bubbling on Web and Mobile
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+
+    if (onDelete) {
+      onDelete(item);
     }
   };
 
@@ -67,6 +83,16 @@ export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
           <Text style={styles.nameText} numberOfLines={1}>
             {item.name}
           </Text>
+
+          {onDelete && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleDeletePress}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.deleteIconButton}>
+              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.metaRow}>
@@ -140,11 +166,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingRight: 4,
   },
   nameText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0F172A',
+    flex: 1,
+    marginRight: 6,
+  },
+  deleteIconButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+    zIndex: 10,
   },
   metaRow: {
     flexDirection: 'row',

@@ -4,17 +4,31 @@ import { Item } from '@/types/item';
 import { scheduleItemReminders, cancelItemReminders } from './notifications';
 
 const STORAGE_KEY = '@useit_items_catalog_v1';
-const docDir = (FileSystem as any).documentDirectory || (FileSystem as any).Paths?.documentDirectory;
-const IMAGES_DIR = docDir ? `${docDir}useit_images/` : null;
+
+function getImagesDirectory(): string | null {
+  try {
+    const docDir = (FileSystem as any).documentDirectory || (FileSystem as any).Paths?.documentDirectory;
+    return docDir ? `${docDir}useit_images/` : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 /**
  * Ensures the local images folder exists
  */
-async function ensureDirExists(): Promise<void> {
-  if (!IMAGES_DIR) return;
-  const dirInfo = await FileSystem.getInfoAsync(IMAGES_DIR);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(IMAGES_DIR, { intermediates: true });
+async function ensureDirExists(): Promise<string | null> {
+  const imagesDir = getImagesDirectory();
+  if (!imagesDir) return null;
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(imagesDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(imagesDir, { intermediates: true });
+    }
+    return imagesDir;
+  } catch (error) {
+    console.warn('Error creating images directory:', error);
+    return null;
   }
 }
 
@@ -22,7 +36,7 @@ async function ensureDirExists(): Promise<void> {
  * Copies a temporary photo URI into persistent local document storage
  */
 export async function saveImageLocally(tempUri: string): Promise<string> {
-  if (!tempUri || !IMAGES_DIR) return tempUri;
+  if (!tempUri) return tempUri;
 
   // If it's already a web image or remote URL or local storage path, return as is
   if (tempUri.startsWith('http') || tempUri.includes('useit_images')) {
@@ -30,9 +44,11 @@ export async function saveImageLocally(tempUri: string): Promise<string> {
   }
 
   try {
-    await ensureDirExists();
+    const imagesDir = await ensureDirExists();
+    if (!imagesDir) return tempUri;
+
     const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-    const destPath = `${IMAGES_DIR}${filename}`;
+    const destPath = `${imagesDir}${filename}`;
     await FileSystem.copyAsync({
       from: tempUri,
       to: destPath,

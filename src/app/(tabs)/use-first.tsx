@@ -5,14 +5,14 @@ import {
   StyleSheet,
   SectionList,
   TouchableOpacity,
-  SafeAreaView,
-  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Item, ExpiryGroup, ExpiryStatus } from '@/types/item';
+import { Item, ExpiryStatus } from '@/types/item';
 import { getItems, deleteItem } from '@/utils/storage';
 import { getDaysUntilExpiry, getExpiryStatus } from '@/utils/dateUtils';
+import { confirmDialog } from '@/utils/alertUtils';
 import { ItemCard } from '@/components/ItemCard';
 import { EmptyState } from '@/components/EmptyState';
 
@@ -35,20 +35,28 @@ export default function UseFirstScreen() {
   );
 
   const handleMarkAsUsed = (item: Item) => {
-    Alert.alert(
+    confirmDialog(
       'Mark as Used',
       `Did you use or consume "${item.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, Consumed! 🎉',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteItem(item.id);
-            await loadData();
-          },
-        },
-      ]
+      async () => {
+        await deleteItem(item.id);
+        await loadData();
+      },
+      'Yes, Consumed! 🎉',
+      true
+    );
+  };
+
+  const handleDeleteItem = (item: Item) => {
+    confirmDialog(
+      'Delete Item',
+      `Are you sure you want to remove "${item.name}" from your catalog?`,
+      async () => {
+        await deleteItem(item.id);
+        await loadData();
+      },
+      'Delete',
+      true
     );
   };
 
@@ -141,7 +149,7 @@ export default function UseFirstScreen() {
         )}
         renderItem={({ item }) => (
           <View style={styles.itemWrapper}>
-            <ItemCard item={item} />
+            <ItemCard item={item} onDelete={handleDeleteItem} />
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => handleMarkAsUsed(item)}

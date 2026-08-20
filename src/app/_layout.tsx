@@ -1,17 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  useEffect(() => {
-    // Hide splash screen after initialization
-    SplashScreen.hideAsync().catch(() => {});
-  }, []);
-
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />

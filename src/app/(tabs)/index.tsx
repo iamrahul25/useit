@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Item, CategoryFilterType } from '@/types/item';
-import { getItems } from '@/utils/storage';
+import { getItems, deleteItem } from '@/utils/storage';
 import { getExpiryStatus } from '@/utils/dateUtils';
+import { confirmDialog } from '@/utils/alertUtils';
 import { Header } from '@/components/Header';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ItemCard } from '@/components/ItemCard';
@@ -46,6 +47,19 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  const handleDeleteItem = (item: Item) => {
+    confirmDialog(
+      'Delete Item',
+      `Are you sure you want to remove "${item.name}" from your catalog?`,
+      async () => {
+        await deleteItem(item.id);
+        await loadData();
+      },
+      'Delete',
+      true
+    );
+  };
+
   // Filter items by category and search text
   const filteredItems = items.filter((item) => {
     const matchesCategory =
@@ -67,9 +81,6 @@ export default function HomeScreen() {
   );
   const urgentItems = items.filter(
     (item) => getExpiryStatus(item.expiryDate) === 'urgent'
-  );
-  const soonItems = items.filter(
-    (item) => getExpiryStatus(item.expiryDate) === 'soon'
   );
 
   // Calculate category counts
@@ -120,19 +131,29 @@ export default function HomeScreen() {
                 </View>
 
                 {expiredOrTodayItems.length > 0 && (
-                  <View style={[styles.urgencySection, styles.expiredSection]}>
+                  <View style={styles.urgencySection}>
                     <Text style={styles.urgencyTitle}>🔴 Expires Today / Expired</Text>
                     {expiredOrTodayItems.slice(0, 2).map((item) => (
-                      <ItemCard key={`spotlight_${item.id}`} item={item} compact />
+                      <ItemCard
+                        key={`spotlight_${item.id}`}
+                        item={item}
+                        onDelete={handleDeleteItem}
+                        compact
+                      />
                     ))}
                   </View>
                 )}
 
                 {urgentItems.length > 0 && (
-                  <View style={[styles.urgencySection, styles.urgentSection]}>
+                  <View style={styles.urgencySection}>
                     <Text style={styles.urgencyTitle}>🟠 Expires in 1–2 Days</Text>
                     {urgentItems.slice(0, 2).map((item) => (
-                      <ItemCard key={`spotlight_${item.id}`} item={item} compact />
+                      <ItemCard
+                        key={`spotlight_${item.id}`}
+                        item={item}
+                        onDelete={handleDeleteItem}
+                        compact
+                      />
                     ))}
                   </View>
                 )}
@@ -154,7 +175,7 @@ export default function HomeScreen() {
             />
           </View>
         }
-        renderItem={({ item }) => <ItemCard item={item} />}
+        renderItem={({ item }) => <ItemCard item={item} onDelete={handleDeleteItem} />}
         ListEmptyComponent={
           <EmptyState
             categoryFilter={selectedCategory}
@@ -239,8 +260,6 @@ const styles = StyleSheet.create({
   urgencySection: {
     marginBottom: 8,
   },
-  expiredSection: {},
-  urgentSection: {},
   urgencyTitle: {
     fontSize: 13,
     fontWeight: '700',
