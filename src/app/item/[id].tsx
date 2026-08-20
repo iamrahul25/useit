@@ -11,11 +11,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { Item } from '@/types/item';
+import { Item, ItemCategory } from '@/types/item';
 import { getItems, deleteItem } from '@/utils/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDisplayDate, getExpiryStatus, getStatusTheme } from '@/utils/dateUtils';
 import { confirmDialog } from '@/utils/alertUtils';
+
+const CATEGORY_ICONS: Record<ItemCategory, string> = {
+  Dairy: '🥛',
+  Vegetables: '🥦',
+  Fruits: '🍎',
+  Snacks: '🥜',
+  'Meat & Seafood': '🥩',
+  Bakery: '🍞',
+  Beverages: '🧃',
+  Medicine: '💊',
+  Other: '📦',
+};
 
 export default function ItemDetailScreen() {
   const router = useRouter();
@@ -55,7 +67,7 @@ export default function ItemDetailScreen() {
 
     confirmDialog(
       'Delete Item',
-      `Are you sure you want to delete "${item.name}" from your catalog?`,
+      `Are you sure you want to delete "${item.name}" from your food catalog?`,
       async () => {
         await deleteItem(item.id);
         router.back();
@@ -68,7 +80,7 @@ export default function ItemDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2563EB" />
+        <ActivityIndicator size="large" color="#16A34A" />
       </View>
     );
   }
@@ -76,7 +88,7 @@ export default function ItemDetailScreen() {
   if (!item) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Item not found</Text>
+        <Text style={styles.errorText}>Food item not found</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -86,9 +98,19 @@ export default function ItemDetailScreen() {
 
   const status = getExpiryStatus(item.expiryDate);
   const theme = getStatusTheme(status);
+  const categoryEmoji = CATEGORY_ICONS[item.category] || '📦';
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Top Header Bar */}
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBackButton}>
+          <Ionicons name="arrow-back" size={22} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Item Details</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView contentContainerStyle={styles.container}>
         {/* Full Image Banner */}
         <View style={styles.imageContainer}>
@@ -96,24 +118,12 @@ export default function ItemDetailScreen() {
             <Image source={{ uri: item.imageUri }} style={styles.image} contentFit="cover" />
           ) : (
             <View style={[styles.placeholderImage, { backgroundColor: theme.bg }]}>
-              <Text style={styles.placeholderEmoji}>
-                {item.category === 'Food'
-                  ? '🥛'
-                  : item.category === 'Medicine'
-                  ? '💊'
-                  : item.category === 'Produce'
-                  ? '🍎'
-                  : item.category === 'Cosmetics'
-                  ? '🧴'
-                  : item.category === 'Supplements'
-                  ? '🌿'
-                  : '📦'}
-              </Text>
+              <Text style={styles.placeholderEmoji}>{categoryEmoji}</Text>
             </View>
           )}
 
           <View style={styles.badgeOverlay}>
-            <StatusBadge expiryDate={item.expiryDate} size="large" />
+            <StatusBadge expiryDate={item.expiryDate} />
           </View>
         </View>
 
@@ -123,7 +133,9 @@ export default function ItemDetailScreen() {
 
           <View style={styles.categoryRow}>
             <View style={styles.categoryPill}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+              <Text style={styles.categoryText}>
+                {categoryEmoji} {item.category}
+              </Text>
             </View>
             {item.quantity ? <Text style={styles.quantityText}>Qty: {item.quantity}</Text> : null}
           </View>
@@ -131,7 +143,7 @@ export default function ItemDetailScreen() {
           {/* Details Breakdown */}
           <View style={styles.detailsGroup}>
             <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={20} color="#2563EB" />
+              <Ionicons name="calendar-outline" size={20} color="#16A34A" />
               <View>
                 <Text style={styles.detailLabel}>EXPIRY DATE</Text>
                 <Text style={styles.detailValue}>{formatDisplayDate(item.expiryDate)}</Text>
@@ -159,7 +171,7 @@ export default function ItemDetailScreen() {
             )}
 
             <View style={styles.detailRow}>
-              <Ionicons name="time-outline" size={20} color="#64748B" />
+              <Ionicons name="time-outline" size={20} color="#6B7280" />
               <View>
                 <Text style={styles.detailLabel}>ADDED TO CATALOG</Text>
                 <Text style={styles.detailValue}>{formatDisplayDate(item.createdAt)}</Text>
@@ -173,7 +185,7 @@ export default function ItemDetailScreen() {
             onPress={handleMarkAsUsed}
             style={styles.usedButton}>
             <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-            <Text style={styles.usedButtonText}>Mark as Used / Consumed</Text>
+            <Text style={styles.usedButtonText}>Mark as Consumed</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -192,7 +204,24 @@ export default function ItemDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  headerBackButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
   centerContainer: {
     flex: 1,
@@ -202,11 +231,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#64748B',
+    color: '#6B7280',
     marginBottom: 12,
   },
   backButton: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#16A34A',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
@@ -222,7 +251,7 @@ const styles = StyleSheet.create({
     height: 260,
     width: '100%',
     position: 'relative',
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F3F4F6',
   },
   image: {
     width: '100%',
@@ -251,9 +280,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#111827',
   },
   categoryRow: {
     flexDirection: 'row',
@@ -261,7 +290,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   categoryPill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
@@ -269,20 +298,20 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
+    color: '#374151',
   },
   quantityText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6B7280',
     fontWeight: '600',
   },
   detailsGroup: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F9FAFB',
     borderRadius: 16,
     padding: 16,
     gap: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5E7EB',
   },
   detailRow: {
     flexDirection: 'row',
@@ -292,13 +321,13 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#6B7280',
     letterSpacing: 0.8,
   },
   detailValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#111827',
     marginTop: 2,
   },
   usedButton: {

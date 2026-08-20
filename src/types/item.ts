@@ -1,10 +1,12 @@
 export type ItemCategory =
-  | 'Food'
+  | 'Dairy'
+  | 'Vegetables'
+  | 'Fruits'
+  | 'Snacks'
+  | 'Meat & Seafood'
+  | 'Bakery'
+  | 'Beverages'
   | 'Medicine'
-  | 'Produce'
-  | 'Consumables'
-  | 'Cosmetics'
-  | 'Supplements'
   | 'Other';
 
 export type CategoryFilterType = 'All' | ItemCategory;
@@ -22,6 +24,7 @@ export interface Item {
   notes?: string;
   imageUri?: string;
   createdAt: string;
+  isReminded?: boolean;
 }
 
 export interface ExpiryGroup {

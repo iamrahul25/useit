@@ -7,35 +7,61 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: '#64748B',
+        tabBarActiveTintColor: '#16A34A',
+        tabBarInactiveTintColor: '#6B7280',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
-          paddingBottom: 6,
-          paddingTop: 6,
+          borderTopColor: '#F3F4F6',
+          height: 62,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Catalog',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Ionicons name="home" size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
+        name="categories"
+        options={{
+          title: 'Categories',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="grid-outline" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="reminders"
+        options={{
+          title: 'Reminders',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="notifications-outline" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="ellipsis-horizontal" size={22} color={color} />
+          ),
+        }}
+      />
+      {/* Hide legacy route if present */}
+      <Tabs.Screen
         name="use-first"
         options={{
-          title: 'Use First',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
     </Tabs>

@@ -10,29 +10,21 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#F8FAFC' },
+          contentStyle: { backgroundColor: '#FFFFFF' },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="add-item"
           options={{
             presentation: 'modal',
-            headerShown: true,
-            title: '📸 Add New Item',
-            headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-            headerStyle: { backgroundColor: '#FFFFFF' },
-            headerTintColor: '#0F172A',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="item/[id]"
           options={{
             presentation: 'card',
-            headerShown: true,
-            title: 'Item Details',
-            headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-            headerStyle: { backgroundColor: '#FFFFFF' },
-            headerTintColor: '#0F172A',
+            headerShown: false,
           }}
         />
       </Stack>

@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { Item } from '@/types/item';
+import { Item, ItemCategory } from '@/types/item';
 import { StatusBadge } from './StatusBadge';
-import { getExpiryStatus, getStatusTheme } from '@/utils/dateUtils';
+import { formatDisplayDate, getExpiryStatus, getStatusTheme } from '@/utils/dateUtils';
 import { useRouter } from 'expo-router';
 
 interface ItemCardProps {
@@ -13,6 +13,18 @@ interface ItemCardProps {
   onDelete?: (item: Item) => void;
   compact?: boolean;
 }
+
+const CATEGORY_ICONS: Record<ItemCategory, string> = {
+  Dairy: '🥛',
+  Vegetables: '🥦',
+  Fruits: '🍎',
+  Snacks: '🥜',
+  'Meat & Seafood': '🥩',
+  Bakery: '🍞',
+  Beverages: '🧃',
+  Medicine: '💊',
+  Other: '📦',
+};
 
 export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardProps) {
   const router = useRouter();
@@ -28,25 +40,25 @@ export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardP
   };
 
   const handleDeletePress = (e?: any) => {
-    // Prevent event bubbling on Web and Mobile
     if (e && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
     if (e && typeof e.preventDefault === 'function') {
       e.preventDefault();
     }
-
     if (onDelete) {
       onDelete(item);
     }
   };
 
+  const categoryEmoji = CATEGORY_ICONS[item.category] || '📦';
+
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={handlePress}
-      style={[styles.card, { borderColor: theme.border }]}>
-      {/* Visual Thumbnail */}
+      style={styles.card}>
+      {/* Food Thumbnail */}
       <View style={styles.imageContainer}>
         {item.imageUri ? (
           <Image
@@ -57,29 +69,14 @@ export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardP
           />
         ) : (
           <View style={[styles.placeholderImage, { backgroundColor: theme.bg }]}>
-            <Text style={styles.placeholderEmoji}>
-              {item.category === 'Food'
-                ? '🥛'
-                : item.category === 'Medicine'
-                ? '💊'
-                : item.category === 'Produce'
-                ? '🍎'
-                : item.category === 'Cosmetics'
-                ? '🧴'
-                : item.category === 'Supplements'
-                ? '🌿'
-                : '📦'}
-            </Text>
+            <Text style={styles.placeholderEmoji}>{categoryEmoji}</Text>
           </View>
         )}
-        <View style={styles.badgeOverlay}>
-          <StatusBadge expiryDate={item.expiryDate} size="small" />
-        </View>
       </View>
 
-      {/* Info Section */}
-      <View style={styles.detailsContainer}>
-        <View style={styles.headerRow}>
+      {/* Item Information */}
+      <View style={styles.infoContainer}>
+        <View style={styles.titleRow}>
           <Text style={styles.nameText} numberOfLines={1}>
             {item.name}
           </Text>
@@ -89,29 +86,29 @@ export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardP
               activeOpacity={0.7}
               onPress={handleDeletePress}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.deleteIconButton}>
-              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              style={styles.menuIconButton}>
+              <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.categoryChip}>
-            <Text style={styles.categoryText}>{item.category}</Text>
-          </View>
-
-          {item.quantity ? (
-            <Text style={styles.quantityText} numberOfLines={1}>
-              • {item.quantity}
-            </Text>
-          ) : null}
+        {/* Category */}
+        <View style={styles.categoryRow}>
+          <Text style={styles.categoryEmoji}>{categoryEmoji}</Text>
+          <Text style={styles.categoryText}>{item.category}</Text>
         </View>
 
-        {item.location ? (
-          <Text style={styles.locationText} numberOfLines={1}>
-            📍 {item.location}
+        {/* Expiry Date & Remaining Days Pill */}
+        <View style={styles.expiryRow}>
+          <Text style={styles.expiryLabel}>
+            Expires on{' '}
+            <Text style={[styles.expiryDateValue, { color: theme.text }]}>
+              {formatDisplayDate(item.expiryDate)}
+            </Text>
           </Text>
-        ) : null}
+
+          <StatusBadge expiryDate={item.expiryDate} />
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -122,21 +119,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
+    borderColor: '#E5E7EB',
+    padding: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   imageContainer: {
-    width: 96,
-    height: 96,
-    position: 'relative',
-    backgroundColor: '#F8FAFC',
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
   },
   image: {
     width: '100%',
@@ -149,61 +148,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   placeholderEmoji: {
-    fontSize: 36,
+    fontSize: 32,
   },
-  badgeOverlay: {
-    position: 'absolute',
-    bottom: 4,
-    left: 4,
-  },
-  detailsContainer: {
+  infoContainer: {
     flex: 1,
-    padding: 12,
+    marginLeft: 12,
     justifyContent: 'center',
-    gap: 4,
   },
-  headerRow: {
+  titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingRight: 4,
   },
   nameText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#111827',
     flex: 1,
     marginRight: 6,
   },
-  deleteIconButton: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
-    zIndex: 10,
+  menuIconButton: {
+    padding: 2,
   },
-  metaRow: {
+  categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    marginTop: 3,
+    marginBottom: 6,
+    gap: 4,
   },
-  categoryChip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+  categoryEmoji: {
+    fontSize: 12,
   },
   categoryText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
   },
-  quantityText: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#64748B',
+  expiryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 2,
+  },
+  expiryLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  expiryDateValue: {
+    fontWeight: '700',
   },
 });

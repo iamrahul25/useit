@@ -13,9 +13,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Item, CategoryFilterType } from '@/types/item';
 import { getItems, deleteItem } from '@/utils/storage';
-import { getExpiryStatus } from '@/utils/dateUtils';
 import { confirmDialog } from '@/utils/alertUtils';
-import { Header } from '@/components/Header';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ItemCard } from '@/components/ItemCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -50,7 +48,7 @@ export default function HomeScreen() {
   const handleDeleteItem = (item: Item) => {
     confirmDialog(
       'Delete Item',
-      `Are you sure you want to remove "${item.name}" from your catalog?`,
+      `Are you sure you want to remove "${item.name}" from your food items?`,
       async () => {
         await deleteItem(item.id);
         await loadData();
@@ -70,19 +68,6 @@ export default function HomeScreen() {
     return matchesCategory && matchesSearch;
   });
 
-  // Calculate stats for Header and Urgent spotlight
-  const urgentCount = items.filter((item) => {
-    const status = getExpiryStatus(item.expiryDate);
-    return status === 'expired' || status === 'urgent';
-  }).length;
-
-  const expiredOrTodayItems = items.filter(
-    (item) => getExpiryStatus(item.expiryDate) === 'expired'
-  );
-  const urgentItems = items.filter(
-    (item) => getExpiryStatus(item.expiryDate) === 'urgent'
-  );
-
   // Calculate category counts
   const categoryCounts = items.reduce<Record<string, number>>((acc, item) => {
     acc['All'] = (acc['All'] || 0) + 1;
@@ -92,7 +77,18 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Header totalItems={items.length} expiringSoonCount={urgentCount} />
+      {/* Top Bar: Menu (Left), Title (Center), Plus (Right) */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="menu" size={24} color="#111827" />
+        </TouchableOpacity>
+
+        <Text style={styles.topHeaderTitle}>My Food Items</Text>
+
+        <TouchableOpacity onPress={() => router.push('/add-item')} style={styles.iconButton}>
+          <Ionicons name="add" size={28} color="#111827" />
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={filteredItems}
@@ -103,71 +99,30 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
-            {/* Search Input Bar */}
-            <View style={styles.searchContainer}>
-              <Ionicons name="search-outline" size={18} color="#94A3B8" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search food, medicines, produce..."
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Expiring Soon Spotlight Banner */}
-            {(expiredOrTodayItems.length > 0 || urgentItems.length > 0) && (
-              <View style={styles.spotlightContainer}>
-                <View style={styles.spotlightHeader}>
-                  <Text style={styles.spotlightTitle}>⚡ Expiring Soon Spotlight</Text>
-                  <TouchableOpacity onPress={() => router.push('/use-first')}>
-                    <Text style={styles.viewAllText}>View All →</Text>
+            {/* Search Input Bar with Filter Icon */}
+            <View style={styles.searchRow}>
+              <View style={styles.searchBox}>
+                <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search items..."
+                  placeholderTextColor="#9CA3AF"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color="#9CA3AF" />
                   </TouchableOpacity>
-                </View>
-
-                {expiredOrTodayItems.length > 0 && (
-                  <View style={styles.urgencySection}>
-                    <Text style={styles.urgencyTitle}>🔴 Expires Today / Expired</Text>
-                    {expiredOrTodayItems.slice(0, 2).map((item) => (
-                      <ItemCard
-                        key={`spotlight_${item.id}`}
-                        item={item}
-                        onDelete={handleDeleteItem}
-                        compact
-                      />
-                    ))}
-                  </View>
-                )}
-
-                {urgentItems.length > 0 && (
-                  <View style={styles.urgencySection}>
-                    <Text style={styles.urgencyTitle}>🟠 Expires in 1–2 Days</Text>
-                    {urgentItems.slice(0, 2).map((item) => (
-                      <ItemCard
-                        key={`spotlight_${item.id}`}
-                        item={item}
-                        onDelete={handleDeleteItem}
-                        compact
-                      />
-                    ))}
-                  </View>
                 )}
               </View>
-            )}
 
-            {/* Category Filter Chips */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Your Visual Catalog</Text>
-              <Text style={styles.sectionSubtitle}>
-                {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'}
-              </Text>
+              <TouchableOpacity style={styles.filterButton}>
+                <Ionicons name="options-outline" size={20} color="#374151" />
+              </TouchableOpacity>
             </View>
 
+            {/* Category Filter Chips */}
             <CategoryFilter
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
@@ -187,15 +142,6 @@ export default function HomeScreen() {
           />
         }
       />
-
-      {/* Floating Action Button (FAB) */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => router.push('/add-item')}
-        style={styles.fabButton}>
-        <Ionicons name="add" size={24} color="#FFFFFF" />
-        <Text style={styles.fabText}>Add Item</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -203,106 +149,51 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
-  listContent: {
-    paddingBottom: 100,
-  },
-  searchContainer: {
+  topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  topHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+    gap: 10,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: '#111827',
   },
-  spotlightContainer: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  spotlightHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  spotlightTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#9A3412',
-  },
-  viewAllText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-  urgencySection: {
-    marginBottom: 8,
-  },
-  urgencyTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: 6,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    paddingHorizontal: 16,
-    marginTop: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  fabButton: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    backgroundColor: '#2563EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 30,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-    gap: 6,
-  },
-  fabText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+  filterButton: {
+    padding: 10,
   },
 });
