@@ -149,7 +149,7 @@ export default function UseFirstScreen() {
         )}
         renderItem={({ item }) => (
           <View style={styles.itemWrapper}>
-            <ItemCard item={item} onDelete={handleDeleteItem} />
+            <ItemCard item={item} />
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => handleMarkAsUsed(item)}

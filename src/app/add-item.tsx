@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,13 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { ItemCategory } from '@/types/item';
-import { addItem } from '@/utils/storage';
+import { addItem, updateItem, getItems } from '@/utils/storage';
 import { formatDisplayDate } from '@/utils/dateUtils';
 
 const CATEGORIES: { label: string; value: ItemCategory; emoji: string }[] = [
@@ -35,6 +35,7 @@ const CATEGORIES: { label: string; value: ItemCategory; emoji: string }[] = [
 
 export default function AddItemScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ItemCategory | null>(null);
@@ -42,6 +43,7 @@ export default function AddItemScreen() {
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
 
   // Default expiry date: 5 days from today
   const defaultDate = new Date();
@@ -51,6 +53,36 @@ export default function AddItemScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function loadExistingItem() {
+      if (id) {
+        const allItems = await getItems();
+        const existing = allItems.find((i) => i.id === id);
+        if (existing) {
+          setName(existing.name);
+          setCategory(existing.category);
+          setQuantity(existing.quantity || '');
+          setLocation(existing.location || '');
+          setNotes(existing.notes || '');
+          setImageUri(existing.imageUri || null);
+          setCreatedAt(existing.createdAt);
+          if (existing.expiryDate) {
+            const parts = existing.expiryDate.split('-');
+            if (parts.length === 3) {
+              const y = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10) - 1;
+              const d = parseInt(parts[2], 10);
+              setExpiryDateObj(new Date(y, m, d));
+            } else {
+              setExpiryDateObj(new Date(existing.expiryDate));
+            }
+          }
+        }
+      }
+    }
+    loadExistingItem();
+  }, [id]);
 
   const expiryDateStr = expiryDateObj.toISOString().split('T')[0];
 
@@ -63,8 +95,7 @@ export default function AddItemScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         quality: 0.85,
       });
 
@@ -85,8 +116,7 @@ export default function AddItemScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: false,
         quality: 0.85,
       });
 
@@ -98,13 +128,17 @@ export default function AddItemScreen() {
     }
   };
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleDateValueChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
     if (selectedDate) {
       setExpiryDateObj(selectedDate);
     }
+  };
+
+  const handleDateDismiss = () => {
+    setShowDatePicker(false);
   };
 
   const handleSave = async () => {
@@ -120,15 +154,29 @@ export default function AddItemScreen() {
 
     setSaving(true);
     try {
-      await addItem({
-        name: name.trim(),
-        category,
-        quantity: quantity.trim() || undefined,
-        expiryDate: expiryDateStr,
-        location: location.trim() || undefined,
-        notes: notes.trim() || undefined,
-        imageUri: imageUri || undefined,
-      });
+      if (id) {
+        await updateItem({
+          id,
+          name: name.trim(),
+          category,
+          quantity: quantity.trim() || undefined,
+          expiryDate: expiryDateStr,
+          location: location.trim() || undefined,
+          notes: notes.trim() || undefined,
+          imageUri: imageUri || undefined,
+          createdAt: createdAt || new Date().toISOString(),
+        });
+      } else {
+        await addItem({
+          name: name.trim(),
+          category,
+          quantity: quantity.trim() || undefined,
+          expiryDate: expiryDateStr,
+          location: location.trim() || undefined,
+          notes: notes.trim() || undefined,
+          imageUri: imageUri || undefined,
+        });
+      }
 
       setSaving(false);
       router.back();
@@ -147,7 +195,7 @@ export default function AddItemScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Food Item</Text>
+        <Text style={styles.headerTitle}>{id ? 'Edit Food Item' : 'Add Food Item'}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -235,7 +283,8 @@ export default function AddItemScreen() {
                 value={expiryDateObj}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                onChange={handleDateChange}
+                onValueChange={handleDateValueChange}
+                onDismiss={handleDateDismiss}
               />
               {Platform.OS === 'ios' && (
                 <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.iosDoneButton}>
@@ -257,7 +306,7 @@ export default function AddItemScreen() {
             numberOfLines={2}
           />
 
-          {/* Large Green Save Button */}
+          {/* Large Green Save / Update Button */}
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSave}
@@ -266,7 +315,7 @@ export default function AddItemScreen() {
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Item</Text>
+              <Text style={styles.saveButtonText}>{id ? 'Update Item' : 'Save Item'}</Text>
             )}
           </TouchableOpacity>
         </View>

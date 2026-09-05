@@ -101,11 +101,17 @@ export default function RemindersScreen() {
 
             return (
               <View key={item.id} style={styles.itemRowCard}>
-                <Image
-                  source={{ uri: item.imageUri || 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=300' }}
-                  style={styles.itemThumbnail}
-                  contentFit="cover"
-                />
+                {item.imageUri ? (
+                  <Image
+                    source={{ uri: item.imageUri }}
+                    style={styles.itemThumbnail}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.itemThumbnail, { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ fontSize: 24 }}>📦</Text>
+                  </View>
+                )}
 
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemNameText} numberOfLines={1}>

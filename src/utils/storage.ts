@@ -67,7 +67,7 @@ export async function getItems(): Promise<Item[]> {
   try {
     const jsonStr = await AsyncStorage.getItem(STORAGE_KEY);
     if (!jsonStr) {
-      return await seedInitialDataIfEmpty();
+      return [];
     }
     const parsed = JSON.parse(jsonStr) as Item[];
     return Array.isArray(parsed) ? parsed : [];
@@ -138,67 +138,4 @@ export async function deleteItem(id: string): Promise<void> {
   const filtered = existing.filter((item) => item.id !== id);
   await saveItems(filtered);
   await cancelItemReminders(id);
-}
-
-/**
- * Seeds initial sample data matching the design prototype
- */
-export async function seedInitialDataIfEmpty(): Promise<Item[]> {
-  const today = new Date();
-
-  const getDateOffset = (daysOffset: number) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + daysOffset);
-    return d.toISOString().split('T')[0];
-  };
-
-  const initialItems: Item[] = [
-    {
-      id: 'sample_1',
-      name: 'Chobani Greek Yogurt Blueberry',
-      category: 'Dairy',
-      quantity: '200g tub',
-      expiryDate: getDateOffset(5), // 5 days left (25 Aug 2026)
-      location: 'Fridge Top Shelf',
-      notes: 'Keep chilled below 4°C',
-      imageUri: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&auto=format&fit=crop&q=80',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'sample_2',
-      name: 'Amul Fresh Milk',
-      category: 'Dairy',
-      quantity: '1 Liter',
-      expiryDate: getDateOffset(8), // 8 days left (28 Aug 2026)
-      location: 'Fridge Door',
-      notes: 'Pasteurized whole milk',
-      imageUri: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&auto=format&fit=crop&q=80',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'sample_3',
-      name: 'Fresh Spinach',
-      category: 'Vegetables',
-      quantity: '250g pack',
-      expiryDate: getDateOffset(2), // 2 days left (22 Aug 2026)
-      location: 'Crisper Drawer',
-      notes: 'Wash before salad preparation',
-      imageUri: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=500&auto=format&fit=crop&q=80',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'sample_4',
-      name: 'Almonds',
-      category: 'Snacks',
-      quantity: '500g jar',
-      expiryDate: getDateOffset(26), // 26 days left (15 Sep 2026)
-      location: 'Pantry Shelf',
-      notes: 'Raw organic almonds',
-      imageUri: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?w=500&auto=format&fit=crop&q=80',
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
-  await saveItems(initialItems);
-  return initialItems;
 }

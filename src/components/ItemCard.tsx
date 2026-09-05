@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 interface ItemCardProps {
   item: Item;
   onPress?: () => void;
-  onDelete?: (item: Item) => void;
   compact?: boolean;
 }
 
@@ -26,7 +25,7 @@ const CATEGORY_ICONS: Record<ItemCategory, string> = {
   Other: '📦',
 };
 
-export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardProps) {
+export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
   const router = useRouter();
   const status = getExpiryStatus(item.expiryDate);
   const theme = getStatusTheme(status);
@@ -36,18 +35,6 @@ export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardP
       onPress();
     } else {
       router.push({ pathname: '/item/[id]', params: { id: item.id } });
-    }
-  };
-
-  const handleDeletePress = (e?: any) => {
-    if (e && typeof e.stopPropagation === 'function') {
-      e.stopPropagation();
-    }
-    if (e && typeof e.preventDefault === 'function') {
-      e.preventDefault();
-    }
-    if (onDelete) {
-      onDelete(item);
     }
   };
 
@@ -80,16 +67,6 @@ export function ItemCard({ item, onPress, onDelete, compact = false }: ItemCardP
           <Text style={styles.nameText} numberOfLines={1}>
             {item.name}
           </Text>
-
-          {onDelete && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={handleDeletePress}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.menuIconButton}>
-              <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Category */}

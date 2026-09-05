@@ -130,7 +130,7 @@ export default function HomeScreen() {
             />
           </View>
         }
-        renderItem={({ item }) => <ItemCard item={item} onDelete={handleDeleteItem} />}
+        renderItem={({ item }) => <ItemCard item={item} />}
         ListEmptyComponent={
           <EmptyState
             categoryFilter={selectedCategory}

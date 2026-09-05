@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Item, ItemCategory } from '@/types/item';
@@ -36,16 +36,19 @@ export default function ItemDetailScreen() {
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchItem() {
-      if (!id) return;
-      const allItems = await getItems();
-      const found = allItems.find((i) => i.id === id);
-      setItem(found || null);
-      setLoading(false);
-    }
-    fetchItem();
-  }, [id]);
+  const fetchItem = async () => {
+    if (!id) return;
+    const allItems = await getItems();
+    const found = allItems.find((i) => i.id === id);
+    setItem(found || null);
+    setLoading(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchItem();
+    }, [id])
+  );
 
   const handleMarkAsUsed = () => {
     if (!item) return;
@@ -60,6 +63,11 @@ export default function ItemDetailScreen() {
       'Consumed! 🎉',
       true
     );
+  };
+
+  const handleEdit = () => {
+    if (!item) return;
+    router.push({ pathname: '/add-item', params: { id: item.id } });
   };
 
   const handleDelete = () => {
@@ -108,7 +116,9 @@ export default function ItemDetailScreen() {
           <Ionicons name="arrow-back" size={22} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Item Details</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={handleEdit} style={styles.headerBackButton}>
+          <Ionicons name="create-outline" size={22} color="#111827" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -186,6 +196,14 @@ export default function ItemDetailScreen() {
             style={styles.usedButton}>
             <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
             <Text style={styles.usedButtonText}>Mark as Consumed</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleEdit}
+            style={styles.editButton}>
+            <Ionicons name="create-outline" size={20} color="#2563EB" />
+            <Text style={styles.editButtonText}>Edit Details</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -349,6 +367,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '800',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    gap: 6,
+  },
+  editButtonText: {
+    color: '#2563EB',
+    fontSize: 15,
+    fontWeight: '700',
   },
   deleteButton: {
     flexDirection: 'row',

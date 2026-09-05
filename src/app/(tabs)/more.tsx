@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,23 +12,6 @@ import { useRouter } from 'expo-router';
 
 export default function MoreScreen() {
   const router = useRouter();
-
-  const handleResetData = () => {
-    Alert.alert(
-      'Reset Catalog',
-      'Are you sure you want to reset sample food data?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: () => {
-            router.push('/');
-          },
-        },
-      ]
-    );
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -50,16 +32,6 @@ export default function MoreScreen() {
           <TouchableOpacity style={styles.rowItem}>
             <Ionicons name="camera-outline" size={20} color="#374151" />
             <Text style={styles.rowLabel}>Default Camera Aspect Ratio</Text>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionHeader}>DATA & BACKUP</Text>
-
-          <TouchableOpacity onPress={handleResetData} style={styles.rowItem}>
-            <Ionicons name="refresh-outline" size={20} color="#DC2626" />
-            <Text style={[styles.rowLabel, { color: '#DC2626' }]}>Reset Sample Food Items</Text>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
