@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Item, ItemCategory } from '@/types/item';
-import { getItems, deleteItem } from '@/utils/storage';
+import { getItems, deleteItem, markItemAsConsumed, restoreItemToActive } from '@/utils/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDisplayDate, getExpiryStatus, getStatusTheme } from '@/utils/dateUtils';
 import { confirmDialog } from '@/utils/alertUtils';
@@ -54,14 +54,29 @@ export default function ItemDetailScreen() {
     if (!item) return;
 
     confirmDialog(
-      'Mark as Used',
-      `Mark "${item.name}" as consumed or used?`,
+      'Mark as Consumed',
+      `Mark "${item.name}" as consumed? It will move to the Consumed section.`,
       async () => {
-        await deleteItem(item.id);
-        router.back();
+        await markItemAsConsumed(item.id);
+        await fetchItem();
       },
       'Consumed! 🎉',
-      true
+      false
+    );
+  };
+
+  const handleRestore = () => {
+    if (!item) return;
+
+    confirmDialog(
+      'Restore Item',
+      `Restore "${item.name}" back to your active list?`,
+      async () => {
+        await restoreItemToActive(item.id);
+        await fetchItem();
+      },
+      'Restore',
+      false
     );
   };
 
@@ -75,7 +90,7 @@ export default function ItemDetailScreen() {
 
     confirmDialog(
       'Delete Item',
-      `Are you sure you want to delete "${item.name}" from your food catalog?`,
+      `Are you sure you want to permanently delete "${item.name}" from your food catalog?`,
       async () => {
         await deleteItem(item.id);
         router.back();
@@ -127,13 +142,13 @@ export default function ItemDetailScreen() {
           {item.imageUri ? (
             <Image source={{ uri: item.imageUri }} style={styles.image} contentFit="cover" />
           ) : (
-            <View style={[styles.placeholderImage, { backgroundColor: theme.bg }]}>
+            <View style={[styles.placeholderImage, { backgroundColor: item.isConsumed ? '#DCFCE7' : theme.bg }]}>
               <Text style={styles.placeholderEmoji}>{categoryEmoji}</Text>
             </View>
           )}
 
           <View style={styles.badgeOverlay}>
-            <StatusBadge expiryDate={item.expiryDate} />
+            <StatusBadge expiryDate={item.expiryDate} isConsumed={item.isConsumed} />
           </View>
         </View>
 
@@ -159,6 +174,16 @@ export default function ItemDetailScreen() {
                 <Text style={styles.detailValue}>{formatDisplayDate(item.expiryDate)}</Text>
               </View>
             </View>
+
+            {item.consumedAt && (
+              <View style={styles.detailRow}>
+                <Ionicons name="checkmark-circle-outline" size={20} color="#16A34A" />
+                <View>
+                  <Text style={styles.detailLabel}>CONSUMED ON</Text>
+                  <Text style={styles.detailValue}>{formatDisplayDate(item.consumedAt)}</Text>
+                </View>
+              </View>
+            )}
 
             {item.location && (
               <View style={styles.detailRow}>
@@ -190,13 +215,23 @@ export default function ItemDetailScreen() {
           </View>
 
           {/* Action Buttons */}
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleMarkAsUsed}
-            style={styles.usedButton}>
-            <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-            <Text style={styles.usedButtonText}>Mark as Consumed</Text>
-          </TouchableOpacity>
+          {item.isConsumed ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleRestore}
+              style={styles.usedButton}>
+              <Ionicons name="refresh-circle" size={22} color="#FFFFFF" />
+              <Text style={styles.usedButtonText}>Restore to Active</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleMarkAsUsed}
+              style={styles.usedButton}>
+              <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+              <Text style={styles.usedButtonText}>Mark as Consumed</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             activeOpacity={0.85}
@@ -211,7 +246,7 @@ export default function ItemDetailScreen() {
             onPress={handleDelete}
             style={styles.deleteButton}>
             <Ionicons name="trash-outline" size={20} color="#DC2626" />
-            <Text style={styles.deleteButtonText}>Delete Item</Text>
+            <Text style={styles.deleteButtonText}>Delete Permanently</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

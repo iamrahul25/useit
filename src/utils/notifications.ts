@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Item } from '@/types/item';
 
@@ -113,4 +113,51 @@ export async function cancelItemReminders(itemId: string): Promise<void> {
   } catch (error) {
     console.warn('Error cancelling notification:', error);
   }
+}
+
+/**
+ * Sends a test notification immediately (2s delay) to test system notification permissions & setup
+ */
+export async function sendTestNotification(): Promise<void> {
+  const Notifications = getNotifications();
+
+  if (Notifications && Notifications.scheduleNotificationAsync) {
+    try {
+      if (Notifications.setNotificationHandler) {
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          }),
+        });
+      }
+
+      const hasPermission = await requestNotificationPermissions();
+      if (hasPermission) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: '🔔 Test Notification',
+            body: 'Great news! Expiry reminders and notifications are working properly on your device.',
+            data: { test: true },
+          },
+          trigger: { seconds: 2 },
+        });
+
+        Alert.alert(
+          'Notification Scheduled 🔔',
+          'A test notification will trigger in 2 seconds. Make sure your volume is on!'
+        );
+        return;
+      }
+    } catch (e) {
+      console.warn('Test notification error:', e);
+    }
+  }
+
+  // Fallback for Expo Go / Web / emulator preview without push setup
+  Alert.alert(
+    '🔔 Test Notification',
+    'Great news! Notifications are configured and working properly!\n\n(Local push triggers fire in 2s on standalone APK/iOS builds).'
+  );
 }

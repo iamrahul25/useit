@@ -1,8 +1,11 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { View, StyleSheet } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TabsLayout() {
+  const router = useRouter();
+
   return (
     <Tabs
       screenOptions={{
@@ -12,7 +15,7 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
           borderTopColor: '#F3F4F6',
-          height: 62,
+          height: 64,
           paddingBottom: 8,
           paddingTop: 8,
         },
@@ -40,13 +43,21 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="reminders"
+        name="add-tab"
         options={{
-          title: 'Reminders',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={22} color={color} />
+          title: 'Add',
+          tabBarIcon: ({ color }) => (
+            <View style={styles.addButton}>
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </View>
           ),
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/add-item');
+          },
+        })}
       />
       <Tabs.Screen
         name="more"
@@ -67,3 +78,19 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+});

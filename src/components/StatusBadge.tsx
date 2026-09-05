@@ -5,9 +5,18 @@ import { ExpiryStatus } from '@/types/item';
 
 interface StatusBadgeProps {
   expiryDate: string;
+  isConsumed?: boolean;
 }
 
-export function StatusBadge({ expiryDate }: StatusBadgeProps) {
+export function StatusBadge({ expiryDate, isConsumed }: StatusBadgeProps) {
+  if (isConsumed) {
+    return (
+      <View style={[styles.badge, { backgroundColor: '#DCFCE7' }]}>
+        <Text style={[styles.badgeText, { color: '#15803D' }]}>🎉 Consumed</Text>
+      </View>
+    );
+  }
+
   const status: ExpiryStatus = getExpiryStatus(expiryDate);
   const theme = getStatusTheme(status);
   const label = getDaysLeftLabel(expiryDate);

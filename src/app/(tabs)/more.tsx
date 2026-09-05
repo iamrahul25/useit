@@ -9,9 +9,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { sendTestNotification } from '@/utils/notifications';
 
 export default function MoreScreen() {
   const router = useRouter();
+
+  const handleTestNotification = async () => {
+    await sendTestNotification();
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -32,6 +37,18 @@ export default function MoreScreen() {
           <TouchableOpacity style={styles.rowItem}>
             <Ionicons name="camera-outline" size={20} color="#374151" />
             <Text style={styles.rowLabel}>Default Camera Aspect Ratio</Text>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeader}>NOTIFICATIONS & TESTING</Text>
+
+          <TouchableOpacity onPress={handleTestNotification} style={styles.rowItem}>
+            <Ionicons name="notifications-circle-outline" size={22} color="#16A34A" />
+            <Text style={[styles.rowLabel, { color: '#16A34A', fontWeight: '700' }]}>
+              Test Notification
+            </Text>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>

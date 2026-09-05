@@ -78,13 +78,13 @@ export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
         {/* Expiry Date & Remaining Days Pill */}
         <View style={styles.expiryRow}>
           <Text style={styles.expiryLabel}>
-            Expires on{' '}
-            <Text style={[styles.expiryDateValue, { color: theme.text }]}>
+            {item.isConsumed ? 'Consumed' : 'Expires on'}{' '}
+            <Text style={[styles.expiryDateValue, { color: item.isConsumed ? '#15803D' : theme.text }]}>
               {formatDisplayDate(item.expiryDate)}
             </Text>
           </Text>
 
-          <StatusBadge expiryDate={item.expiryDate} />
+          <StatusBadge expiryDate={item.expiryDate} isConsumed={item.isConsumed} />
         </View>
       </View>
     </TouchableOpacity>

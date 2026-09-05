@@ -11,9 +11,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Item, CategoryFilterType } from '@/types/item';
+import { Item, CategoryFilterType, ItemTabStatus } from '@/types/item';
 import { getItems, deleteItem } from '@/utils/storage';
 import { confirmDialog } from '@/utils/alertUtils';
+import { getDaysUntilExpiry } from '@/utils/dateUtils';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ItemCard } from '@/components/ItemCard';
 import { EmptyState } from '@/components/EmptyState';
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilterType>('All');
+  const [selectedTab, setSelectedTab] = useState<ItemTabStatus>('active');
 
   const loadData = async () => {
     setLoading(true);
@@ -45,21 +47,20 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const handleDeleteItem = (item: Item) => {
-    confirmDialog(
-      'Delete Item',
-      `Are you sure you want to remove "${item.name}" from your food items?`,
-      async () => {
-        await deleteItem(item.id);
-        await loadData();
-      },
-      'Delete',
-      true
-    );
-  };
+  // Group items by status
+  const activeItems = items.filter((item) => !item.isConsumed && getDaysUntilExpiry(item.expiryDate) > 0);
+  const expiredItems = items.filter((item) => !item.isConsumed && getDaysUntilExpiry(item.expiryDate) <= 0);
+  const consumedItems = items.filter((item) => item.isConsumed);
+
+  const targetTabItems =
+    selectedTab === 'active'
+      ? activeItems
+      : selectedTab === 'expired'
+      ? expiredItems
+      : consumedItems;
 
   // Filter items by category and search text
-  const filteredItems = items.filter((item) => {
+  const filteredItems = targetTabItems.filter((item) => {
     const matchesCategory =
       selectedCategory === 'All' || item.category === selectedCategory;
     const matchesSearch =
@@ -68,26 +69,54 @@ export default function HomeScreen() {
     return matchesCategory && matchesSearch;
   });
 
-  // Calculate category counts
-  const categoryCounts = items.reduce<Record<string, number>>((acc, item) => {
+  // Calculate category counts for current tab
+  const categoryCounts = targetTabItems.reduce<Record<string, number>>((acc, item) => {
     acc['All'] = (acc['All'] || 0) + 1;
     acc[item.category] = (acc[item.category] || 0) + 1;
     return acc;
   }, {});
 
+  const getEmptyMessage = () => {
+    if (searchQuery) return `No items matching "${searchQuery}"`;
+    if (selectedTab === 'expired') return 'No expired items! Great job keeping food fresh 🎉';
+    if (selectedTab === 'consumed') return 'No consumed items yet.';
+    return undefined;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Bar: Menu (Left), Title (Center), Plus (Right) */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="menu" size={24} color="#111827" />
-        </TouchableOpacity>
+      {/* Top Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Food Items</Text>
+      </View>
 
-        <Text style={styles.topHeaderTitle}>My Food Items</Text>
+      {/* Segmented Tab Bar: Active | Expired | Consumed */}
+      <View style={styles.tabSwitcherContainer}>
+        <View style={styles.tabSwitcherRow}>
+          <TouchableOpacity
+            onPress={() => setSelectedTab('active')}
+            style={[styles.tabSegment, selectedTab === 'active' && styles.tabSegmentActive]}>
+            <Text style={[styles.tabSegmentText, selectedTab === 'active' && styles.tabSegmentTextActive]}>
+              Active ({activeItems.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/add-item')} style={styles.iconButton}>
-          <Ionicons name="add" size={28} color="#111827" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSelectedTab('expired')}
+            style={[styles.tabSegment, selectedTab === 'expired' && styles.tabSegmentActiveExpired]}>
+            <Text style={[styles.tabSegmentText, selectedTab === 'expired' && styles.tabSegmentTextExpired]}>
+              Expired ({expiredItems.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setSelectedTab('consumed')}
+            style={[styles.tabSegment, selectedTab === 'consumed' && styles.tabSegmentActiveConsumed]}>
+            <Text style={[styles.tabSegmentText, selectedTab === 'consumed' && styles.tabSegmentTextConsumed]}>
+              Consumed ({consumedItems.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -134,11 +163,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <EmptyState
             categoryFilter={selectedCategory}
-            message={
-              searchQuery
-                ? `No items matching "${searchQuery}"`
-                : undefined
-            }
+            message={getEmptyMessage()}
           />
         }
       />
@@ -151,20 +176,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  iconButton: {
-    padding: 4,
-  },
-  topHeaderTitle: {
-    fontSize: 18,
+  headerTitle: {
+    fontSize: 22,
     fontWeight: '700',
     color: '#111827',
+  },
+  tabSwitcherContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  tabSwitcherRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+  },
+  tabSegment: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  tabSegmentActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabSegmentActiveExpired: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  tabSegmentActiveConsumed: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  tabSegmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  tabSegmentTextActive: {
+    color: '#16A34A',
+    fontWeight: '700',
+  },
+  tabSegmentTextExpired: {
+    color: '#DC2626',
+    fontWeight: '700',
+  },
+  tabSegmentTextConsumed: {
+    color: '#15803D',
+    fontWeight: '700',
   },
   listContent: {
     paddingHorizontal: 16,

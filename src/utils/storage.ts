@@ -139,3 +139,42 @@ export async function deleteItem(id: string): Promise<void> {
   await saveItems(filtered);
   await cancelItemReminders(id);
 }
+
+/**
+ * Marks an item as consumed and cancels its notification
+ */
+export async function markItemAsConsumed(id: string): Promise<void> {
+  const existing = await getItems();
+  const updated = existing.map((item) => {
+    if (item.id === id) {
+      return {
+        ...item,
+        isConsumed: true,
+        consumedAt: new Date().toISOString(),
+      };
+    }
+    return item;
+  });
+  await saveItems(updated);
+  await cancelItemReminders(id);
+}
+
+/**
+ * Restores a consumed item back to active status
+ */
+export async function restoreItemToActive(id: string): Promise<void> {
+  const existing = await getItems();
+  const updated = existing.map((item) => {
+    if (item.id === id) {
+      const restored = { ...item, isConsumed: false };
+      delete restored.consumedAt;
+      return restored;
+    }
+    return item;
+  });
+  await saveItems(updated);
+  const restoredItem = updated.find((i) => i.id === id);
+  if (restoredItem) {
+    await scheduleItemReminders(restoredItem);
+  }
+}
