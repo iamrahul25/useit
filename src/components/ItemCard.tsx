@@ -25,6 +25,14 @@ const CATEGORY_ICONS: Record<ItemCategory, string> = {
   Other: '📦',
 };
 
+function getRecurringBadgeText(item: Item): string {
+  if (item.recurringFrequency === 'every_2_days') return 'Every 2 days';
+  if (item.recurringFrequency === 'every_x_days') return `Every ${item.recurringCustomDays || 1} days`;
+  if (item.recurringFrequency === 'every_week') return 'Every week';
+  if (item.recurringFrequency === 'every_month') return 'Every month';
+  return 'Every day';
+}
+
 export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
   const router = useRouter();
   const status = getExpiryStatus(item.expiryDate);
@@ -69,10 +77,17 @@ export function ItemCard({ item, onPress, compact = false }: ItemCardProps) {
           </Text>
         </View>
 
-        {/* Category */}
+        {/* Category & Recurring Badge */}
         <View style={styles.categoryRow}>
           <Text style={styles.categoryEmoji}>{categoryEmoji}</Text>
           <Text style={styles.categoryText}>{item.category}</Text>
+
+          {item.isRecurringNotificationEnabled && (
+            <View style={styles.recurringBadge}>
+              <Ionicons name="repeat-outline" size={12} color="#15803D" />
+              <Text style={styles.recurringBadgeText}>{getRecurringBadgeText(item)}</Text>
+            </View>
+          )}
         </View>
 
         {/* Expiry Date & Remaining Days Pill */}
@@ -161,6 +176,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  recurringBadge: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 3,
+  },
+  recurringBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
   },
   expiryRow: {
     flexDirection: 'row',

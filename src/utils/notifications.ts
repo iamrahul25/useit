@@ -92,6 +92,45 @@ export async function scheduleItemReminders(item: Item): Promise<void> {
         trigger: { date: dayOfExpiry },
       }).catch(() => {});
     }
+
+    // Recurring consume notification
+    if (item.isRecurringNotificationEnabled && !item.isConsumed) {
+      const [hStr, mStr] = (item.recurringNotificationTime || '09:00').split(':');
+      const hours = parseInt(hStr || '9', 10);
+      const minutes = parseInt(mStr || '0', 10);
+
+      let freqLabel = 'daily';
+      let trigger: any;
+
+      if (item.recurringFrequency === 'every_day' || !item.recurringFrequency) {
+        freqLabel = 'every day';
+        trigger = { hour: hours, minute: minutes, repeats: true };
+      } else if (item.recurringFrequency === 'every_2_days') {
+        freqLabel = 'every 2 days';
+        trigger = { seconds: 2 * 24 * 60 * 60, repeats: true };
+      } else if (item.recurringFrequency === 'every_x_days') {
+        const days = Math.max(1, item.recurringCustomDays || 1);
+        freqLabel = `every ${days} days`;
+        trigger = { seconds: days * 24 * 60 * 60, repeats: true };
+      } else if (item.recurringFrequency === 'every_week') {
+        freqLabel = 'every week';
+        trigger = { seconds: 7 * 24 * 60 * 60, repeats: true };
+      } else if (item.recurringFrequency === 'every_month') {
+        freqLabel = 'every month';
+        trigger = { seconds: 30 * 24 * 60 * 60, repeats: true };
+      }
+
+      if (trigger) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `🍽️ Consume Reminder: ${item.name}`,
+            body: `Don't forget to consume ${item.name}! (${freqLabel} reminder at ${item.recurringNotificationTime || '09:00'})`,
+            data: { itemId: item.id, isRecurring: true },
+          },
+          trigger,
+        }).catch(() => {});
+      }
+    }
   } catch (error) {
     console.warn('Error scheduling notification:', error);
   }

@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,7 +18,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { ItemCategory } from '@/types/item';
+import { ItemCategory, RecurringFrequency } from '@/types/item';
 import { addItem, updateItem, getItems } from '@/utils/storage';
 import { formatDisplayDate } from '@/utils/dateUtils';
 
@@ -32,6 +33,26 @@ const CATEGORIES: { label: string; value: ItemCategory; emoji: string }[] = [
   { label: 'Medicine', value: 'Medicine', emoji: '💊' },
   { label: 'Other', value: 'Other', emoji: '📦' },
 ];
+
+const RECURRING_FREQUENCIES: { label: string; value: RecurringFrequency }[] = [
+  { label: 'Every day', value: 'every_day' },
+  { label: 'Every 2 days', value: 'every_2_days' },
+  { label: 'Every X days', value: 'every_x_days' },
+  { label: 'Every week', value: 'every_week' },
+  { label: 'Every month', value: 'every_month' },
+];
+
+function formatTime12h(timeStr: string): string {
+  if (!timeStr) return '9:00 AM';
+  const parts = timeStr.split(':');
+  let h = parseInt(parts[0] || '9', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  const mDisplay = m < 10 ? `0${m}` : `${m}`;
+  return `${h}:${mDisplay} ${ampm}`;
+}
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -53,6 +74,17 @@ export default function AddItemScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Recurring Notification state
+  const [isRecurringEnabled, setIsRecurringEnabled] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>('every_day');
+  const [recurringCustomDays, setRecurringCustomDays] = useState('3');
+  const [recurringNotificationTime, setRecurringNotificationTime] = useState('09:00');
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const defaultTimeObj = new Date();
+  defaultTimeObj.setHours(9, 0, 0, 0);
+  const [timePickerObj, setTimePickerObj] = useState<Date>(defaultTimeObj);
 
   useEffect(() => {
     async function loadExistingItem() {
@@ -77,6 +109,22 @@ export default function AddItemScreen() {
             } else {
               setExpiryDateObj(new Date(existing.expiryDate));
             }
+          }
+          if (existing.isRecurringNotificationEnabled !== undefined) {
+            setIsRecurringEnabled(existing.isRecurringNotificationEnabled);
+          }
+          if (existing.recurringFrequency) {
+            setRecurringFrequency(existing.recurringFrequency);
+          }
+          if (existing.recurringCustomDays) {
+            setRecurringCustomDays(String(existing.recurringCustomDays));
+          }
+          if (existing.recurringNotificationTime) {
+            setRecurringNotificationTime(existing.recurringNotificationTime);
+            const [h, m] = existing.recurringNotificationTime.split(':').map(Number);
+            const dt = new Date();
+            dt.setHours(h || 9, m || 0, 0, 0);
+            setTimePickerObj(dt);
           }
         }
       }
@@ -141,6 +189,20 @@ export default function AddItemScreen() {
     setShowDatePicker(false);
   };
 
+  const handleTimeValueChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    if (selectedTime) {
+      setTimePickerObj(selectedTime);
+      const hours = selectedTime.getHours();
+      const minutes = selectedTime.getMinutes();
+      const hStr = hours < 10 ? `0${hours}` : `${hours}`;
+      const mStr = minutes < 10 ? `0${minutes}` : `${minutes}`;
+      setRecurringNotificationTime(`${hStr}:${mStr}`);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter an item name.');
@@ -154,28 +216,31 @@ export default function AddItemScreen() {
 
     setSaving(true);
     try {
+      const itemPayload = {
+        name: name.trim(),
+        category,
+        quantity: quantity.trim() || undefined,
+        expiryDate: expiryDateStr,
+        location: location.trim() || undefined,
+        notes: notes.trim() || undefined,
+        imageUri: imageUri || undefined,
+        isRecurringNotificationEnabled: isRecurringEnabled,
+        recurringFrequency: isRecurringEnabled ? recurringFrequency : undefined,
+        recurringCustomDays:
+          isRecurringEnabled && recurringFrequency === 'every_x_days'
+            ? Math.max(1, parseInt(recurringCustomDays, 10) || 1)
+            : undefined,
+        recurringNotificationTime: isRecurringEnabled ? recurringNotificationTime : undefined,
+      };
+
       if (id) {
         await updateItem({
+          ...itemPayload,
           id,
-          name: name.trim(),
-          category,
-          quantity: quantity.trim() || undefined,
-          expiryDate: expiryDateStr,
-          location: location.trim() || undefined,
-          notes: notes.trim() || undefined,
-          imageUri: imageUri || undefined,
           createdAt: createdAt || new Date().toISOString(),
         });
       } else {
-        await addItem({
-          name: name.trim(),
-          category,
-          quantity: quantity.trim() || undefined,
-          expiryDate: expiryDateStr,
-          location: location.trim() || undefined,
-          notes: notes.trim() || undefined,
-          imageUri: imageUri || undefined,
-        });
+        await addItem(itemPayload);
       }
 
       setSaving(false);
@@ -305,6 +370,89 @@ export default function AddItemScreen() {
             multiline
             numberOfLines={2}
           />
+
+          {/* Recurring Notification Card */}
+          <View style={styles.recurringCard}>
+            <View style={styles.recurringToggleRow}>
+              <View style={styles.recurringLabelGroup}>
+                <Ionicons name="repeat-outline" size={22} color="#16A34A" />
+                <View>
+                  <Text style={styles.recurringToggleTitle}>Recurring Notification</Text>
+                  <Text style={styles.recurringToggleSub}>Consume reminders at chosen interval</Text>
+                </View>
+              </View>
+              <Switch
+                value={isRecurringEnabled}
+                onValueChange={setIsRecurringEnabled}
+                trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
+                thumbColor={isRecurringEnabled ? '#16A34A' : '#F3F4F6'}
+              />
+            </View>
+
+            {isRecurringEnabled && (
+              <View style={styles.recurringSubSection}>
+                <Text style={styles.subInputLabel}>Frequency</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.freqChipsContainer}>
+                  {RECURRING_FREQUENCIES.map((freq) => {
+                    const isSelected = recurringFrequency === freq.value;
+                    return (
+                      <TouchableOpacity
+                        key={freq.value}
+                        activeOpacity={0.8}
+                        onPress={() => setRecurringFrequency(freq.value)}
+                        style={[styles.freqChip, isSelected && styles.freqChipSelected]}>
+                        <Text style={[styles.freqChipText, isSelected && styles.freqChipTextSelected]}>
+                          {freq.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {recurringFrequency === 'every_x_days' && (
+                  <View style={styles.customDaysContainer}>
+                    <Text style={styles.subInputLabel}>Number of Days (X)</Text>
+                    <View style={styles.customDaysRow}>
+                      <TextInput
+                        style={styles.customDaysInput}
+                        keyboardType="number-pad"
+                        value={recurringCustomDays}
+                        onChangeText={(text) => setRecurringCustomDays(text.replace(/[^0-9]/g, ''))}
+                        placeholder="e.g. 3"
+                        placeholderTextColor="#9CA3AF"
+                      />
+                      <Text style={styles.customDaysUnit}>days</Text>
+                    </View>
+                  </View>
+                )}
+
+                <Text style={styles.subInputLabel}>Notification Timing (Default: 9:00 AM)</Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setShowTimePicker(true)}
+                  style={styles.timePickerButton}>
+                  <Ionicons name="time-outline" size={20} color="#16A34A" />
+                  <Text style={styles.timePickerText}>{formatTime12h(recurringNotificationTime)}</Text>
+                </TouchableOpacity>
+
+                {(showTimePicker || Platform.OS === 'ios') && (
+                  <View style={styles.datePickerWrapper}>
+                    <DateTimePicker
+                      value={timePickerObj}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleTimeValueChange}
+                    />
+                    {Platform.OS === 'ios' && (
+                      <TouchableOpacity onPress={() => setShowTimePicker(false)} style={styles.iosDoneButton}>
+                        <Text style={styles.iosDoneText}>Done</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* Large Green Save / Update Button */}
           <TouchableOpacity
@@ -582,5 +730,117 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     flex: 1,
+  },
+  recurringCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    marginTop: 18,
+  },
+  recurringToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  recurringLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  recurringToggleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  recurringToggleSub: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  recurringSubSection: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  subInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4B5563',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  freqChipsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  freqChip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  freqChipSelected: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#16A34A',
+  },
+  freqChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  freqChipTextSelected: {
+    color: '#15803D',
+    fontWeight: '700',
+  },
+  customDaysContainer: {
+    marginTop: 4,
+  },
+  customDaysRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  customDaysInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    width: 80,
+    textAlign: 'center',
+  },
+  customDaysUnit: {
+    fontSize: 14,
+    color: '#4B5563',
+    fontWeight: '600',
+  },
+  timePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  timePickerText: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '600',
   },
 });

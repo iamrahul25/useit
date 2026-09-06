@@ -29,6 +29,26 @@ const CATEGORY_ICONS: Record<ItemCategory, string> = {
   Other: '📦',
 };
 
+function getRecurringLabel(item: Item): string {
+  if (!item.isRecurringNotificationEnabled) return 'Disabled';
+  let freqStr = 'Every day';
+  if (item.recurringFrequency === 'every_2_days') freqStr = 'Every 2 days';
+  else if (item.recurringFrequency === 'every_x_days') freqStr = `Every ${item.recurringCustomDays || 1} days`;
+  else if (item.recurringFrequency === 'every_week') freqStr = 'Every week';
+  else if (item.recurringFrequency === 'every_month') freqStr = 'Every month';
+
+  const timeStr = item.recurringNotificationTime || '09:00';
+  const parts = timeStr.split(':');
+  let h = parseInt(parts[0] || '9', 10);
+  const m = parseInt(parts[1] || '0', 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  const mDisplay = m < 10 ? `0${m}` : `${m}`;
+
+  return `${freqStr} at ${h}:${mDisplay} ${ampm}`;
+}
+
 export default function ItemDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -201,6 +221,16 @@ export default function ItemDetailScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.detailLabel}>NOTES</Text>
                   <Text style={styles.detailValue}>{item.notes}</Text>
+                </View>
+              </View>
+            )}
+
+            {item.isRecurringNotificationEnabled && (
+              <View style={styles.detailRow}>
+                <Ionicons name="repeat-outline" size={20} color="#16A34A" />
+                <View>
+                  <Text style={styles.detailLabel}>RECURRING NOTIFICATION</Text>
+                  <Text style={styles.detailValue}>{getRecurringLabel(item)}</Text>
                 </View>
               </View>
             )}

@@ -1,11 +1,8 @@
 Features to add next:
 ----------------------
 1. Custom expiry notification -> (one time) -> 2 day before, 1 day before
-2. Recurring notification -> Consume - every day, every 2 day, every x day, every week, every month 
-3. Notification Timing -> For each item setting (Default -> 9:00 AM) - Changeable 
 4. In (+) Addition Iteam -> When keyboard is poping up -> It's not going up the menu => Fix that
-5. All the consumed item -> Which when not clicked on Consume -> Go to Expired or Consumed section of the page. 
-6. Add test notification button in "More" page when click on that button we can test whether the notification is coming or not. 
+
 
 
 
@@ -15,3 +12,7 @@ Features to add next:
 
 Featured already added: 
 ------------------------ 
+2. Recurring notification -> Consume - every day, every 2 day, every x day, every week, every month 
+3. Notification Timing -> For each item setting (Default -> 9:00 AM) - Changeable 
+5. All the consumed item -> Which when not clicked on Consume -> Go to Expired or Consumed section of the page. 
+6. Add test notification button in "More" page when click on that button we can test whether the notification is coming or not. 
