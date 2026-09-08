@@ -2,7 +2,8 @@ Features to add next:
 ----------------------
 1. Custom expiry notification -> (one time) -> 2 day before, 1 day before
 4. In (+) Addition Iteam -> When keyboard is poping up -> It's not going up the menu => Fix that
-
+6. Generate .apk for this one
+7. Update the icon and proper name of the .apk file -> Release
 
 
 
