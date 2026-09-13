@@ -50,6 +50,20 @@ npm start
 - **iOS Simulator** (macOS only): Press `i` in the terminal or run `npm run ios`.
 - **Web Browser**: Press `w` in the terminal or run `npm run web`.
 
+### 4. Build a Release APK
+For an Expo React Native app with an `android/` folder, run Gradle from the `android` directory in Windows PowerShell:
+
+```powershell
+cd android
+.\gradlew.bat assembleRelease
+```
+
+The generated APK will normally be available at:
+
+```text
+android\app\build\outputs\apk\release\app-release.apk
+```
+
 ---
 
 ## 📁 Project Architecture & Key Files
